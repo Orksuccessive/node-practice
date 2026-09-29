@@ -1,15 +1,15 @@
 const express = require("express");
 
 const noteRoutes = require("./routes/note.routes");
+const authRoutes = require("./routes/auth.routes");
 
 const app = express();
 
 app.use(express.json());
 
-// Routes
+app.use("/auth", authRoutes);
 app.use("/notes", noteRoutes);
 
-// Route not found
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -19,7 +19,6 @@ app.use((req, res) => {
   });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error(err);
 

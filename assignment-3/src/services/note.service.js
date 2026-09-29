@@ -1,23 +1,27 @@
 let notes = [];
 let nextId = 1;
 
-// Get all notes with pagination
-function getAllNotes(limit, offset) {
+function getAllNotes(userId, limit, offset) {
+  const userNotes = notes.filter(
+    (note) => note.userId === userId
+  );
+
   return {
-    notes: notes.slice(offset, offset + limit),
-    total: notes.length,
+    notes: userNotes.slice(offset, offset + limit),
+    total: userNotes.length,
   };
 }
 
-// Get note by ID
-function getNoteById(id) {
-  return notes.find((note) => note.id === id);
+function getNoteById(userId, id) {
+  return notes.find(
+    (note) => note.id === id && note.userId === userId
+  );
 }
 
-// Create note
-function createNote(data) {
+function createNote(userId, data) {
   const note = {
     id: nextId++,
+    userId,
     title: data.title,
     content: data.content,
     createdAt: new Date().toISOString(),
@@ -29,9 +33,8 @@ function createNote(data) {
   return note;
 }
 
-// Update note
-function updateNote(id, data) {
-  const note = getNoteById(id);
+function updateNote(userId, id, data) {
+  const note = getNoteById(userId, id);
 
   if (!note) {
     return null;
@@ -50,9 +53,10 @@ function updateNote(id, data) {
   return note;
 }
 
-// Delete note
-function deleteNote(id) {
-  const index = notes.findIndex((note) => note.id === id);
+function deleteNote(userId, id) {
+  const index = notes.findIndex(
+    (note) => note.id === id && note.userId === userId
+  );
 
   if (index === -1) {
     return false;

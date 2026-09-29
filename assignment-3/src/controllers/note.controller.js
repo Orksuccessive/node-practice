@@ -5,7 +5,6 @@ const {
   updateNoteSchema,
 } = require("../validators/note.validator");
 
-// GET /notes
 function getNotes(req, res) {
   const limit = Number(req.query.limit) || 10;
   const offset = Number(req.query.offset) || 0;
@@ -19,9 +18,15 @@ function getNotes(req, res) {
     });
   }
 
-  const result = noteService.getAllNotes(limit, offset);
+  const userId = req.user.userId;
 
-  res.status(200).json({
+  const result = noteService.getAllNotes(
+    userId,
+    limit,
+    offset
+  );
+
+  res.json({
     success: true,
     data: result.notes,
     pagination: {
@@ -32,7 +37,6 @@ function getNotes(req, res) {
   });
 }
 
-// GET /notes/:id
 function getNote(req, res) {
   const id = Number(req.params.id);
 
@@ -45,7 +49,10 @@ function getNote(req, res) {
     });
   }
 
-  const note = noteService.getNoteById(id);
+  const note = noteService.getNoteById(
+    req.user.userId,
+    id
+  );
 
   if (!note) {
     return res.status(404).json({
@@ -56,13 +63,12 @@ function getNote(req, res) {
     });
   }
 
-  res.status(200).json({
+  res.json({
     success: true,
     data: note,
   });
 }
 
-// POST /notes
 function createNote(req, res) {
   const result = createNoteSchema.safeParse(req.body);
 
@@ -76,7 +82,10 @@ function createNote(req, res) {
     });
   }
 
-  const note = noteService.createNote(result.data);
+  const note = noteService.createNote(
+    req.user.userId,
+    result.data
+  );
 
   res.status(201).json({
     success: true,
@@ -84,7 +93,6 @@ function createNote(req, res) {
   });
 }
 
-// PATCH /notes/:id
 function updateNote(req, res) {
   const id = Number(req.params.id);
 
@@ -109,7 +117,11 @@ function updateNote(req, res) {
     });
   }
 
-  const note = noteService.updateNote(id, result.data);
+  const note = noteService.updateNote(
+    req.user.userId,
+    id,
+    result.data
+  );
 
   if (!note) {
     return res.status(404).json({
@@ -120,13 +132,12 @@ function updateNote(req, res) {
     });
   }
 
-  res.status(200).json({
+  res.json({
     success: true,
     data: note,
   });
 }
 
-// DELETE /notes/:id
 function deleteNote(req, res) {
   const id = Number(req.params.id);
 
@@ -139,7 +150,10 @@ function deleteNote(req, res) {
     });
   }
 
-  const deleted = noteService.deleteNote(id);
+  const deleted = noteService.deleteNote(
+    req.user.userId,
+    id
+  );
 
   if (!deleted) {
     return res.status(404).json({
