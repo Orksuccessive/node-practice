@@ -67,10 +67,38 @@ function deleteNote(userId, id) {
   return true;
 }
 
+ function addAttachment(userId, id, attachment) {
+  const note = notes.find(
+    (note) => note.id === id && note.userId === userId
+  );
+
+  if (!note) {
+    return null;
+  }
+
+  note.attachment = attachment;
+
+  return note;
+}
+
+function getAttachment(userId, id) {
+  const note = notes.find(
+    (note) => note.id === id && note.userId === userId
+  );
+
+  if (!note || !note.attachment) {
+    return null;
+  }
+
+  return note.attachment;
+}
+
 module.exports = {
   getAllNotes,
   getNoteById,
   createNote,
   updateNote,
   deleteNote,
+  addAttachment,
+  getAttachment,
 };

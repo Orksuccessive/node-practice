@@ -2,6 +2,8 @@ const express = require("express");
 
 const noteRoutes = require("./routes/note.routes");
 const authRoutes = require("./routes/auth.routes");
+const multer = require("multer");
+
 
 const app = express();
 
@@ -20,12 +22,38 @@ app.use((req, res) => {
 });
 
 app.use((err, req, res, next) => {
-  console.error(err);
+  if (err instanceof multer.MulterError) {
+    if (err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: "File size must not exceed 2MB",
+        },
+      });
+    }
 
-  res.status(500).json({
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: err.message,
+      },
+    });
+  }
+
+  if (err.message === "Only JPG and PNG images are allowed") {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: err.message,
+      },
+    });
+  }
+
+  // your existing error handling
+  return res.status(err.statusCode || 500).json({
     success: false,
     error: {
-      message: "Internal server error",
+      message: err.message || "Internal server error",
     },
   });
 });

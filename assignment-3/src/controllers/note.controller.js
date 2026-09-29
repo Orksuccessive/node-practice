@@ -1,4 +1,6 @@
 const noteService = require("../services/note.service");
+const path = require("path");
+const fs = require("fs");
 
 const {
   createNoteSchema,
@@ -167,10 +169,106 @@ function deleteNote(req, res) {
   res.status(204).send();
 }
 
+async function uploadAttachment(req, res) {
+  const userId = req.user.userId;
+  const noteId = Number(req.params.id);
+
+  if (!req.file) {
+    return res.status(400).json({
+      success: false,
+      error: {
+        message: "Image file is required",
+      },
+    });
+  }
+
+  const attachment = {
+    filename: req.file.filename,
+    originalName: req.file.originalname,
+    mimeType: req.file.mimetype,
+    size: req.file.size,
+    path: req.file.path,
+  };
+
+  const note = noteService.addAttachment(
+    userId,
+    noteId,
+    attachment
+  );
+
+  if (!note) {
+    fs.unlink(req.file.path, () => {});
+
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: "Note not found",
+      },
+    });
+  }
+
+  return res.status(201).json({
+    success: true,
+    data: {
+      message: "Attachment uploaded successfully",
+      attachment: {
+        filename: attachment.filename,
+        originalName: attachment.originalName,
+        mimeType: attachment.mimeType,
+        size: attachment.size,
+      },
+    },
+  });
+}
+
+async function getAttachment(req, res) {
+  const userId = req.user.userId;
+  const noteId = Number(req.params.id);
+
+  const attachment = noteService.getAttachment(userId, noteId);
+
+  if (!attachment) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: "Attachment not found",
+      },
+    });
+  }
+
+  if (!fs.existsSync(attachment.path)) {
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: "Attachment file does not exist",
+      },
+    });
+  }
+
+  res.setHeader("Content-Type", attachment.mimeType);
+
+  const stream = fs.createReadStream(attachment.path);
+
+  stream.on("error", () => {
+    if (!res.headersSent) {
+      res.status(500).json({
+        success: false,
+        error: {
+          message: "Failed to read attachment",
+        },
+      });
+    }
+  });
+
+  stream.pipe(res);
+}
+
 module.exports = {
   getNotes,
   getNote,
   createNote,
   updateNote,
   deleteNote,
+  uploadAttachment,
+  getAttachment,
 };
