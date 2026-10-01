@@ -52,32 +52,12 @@ async function login(req, res) {
 
   const { email, password } = result.data;
 
-  const user = await authService.validateUser(email, password);
-
-  if (!user) {
-    return res.status(401).json({
-      success: false,
-      error: {
-        message: "Invalid email or password",
-      },
-    });
-  }
-
-  const token = jwt.sign(
-    {
-      userId: user.id,
-      email: user.email,
-    },
-    JWT_SECRET,
-    {
-      expiresIn: "1h",
-    }
-  );
+  const authResult = await authService.validateUser(email, password);
 
   res.status(200).json({
     success: true,
     data: {
-      token,
+      token: authResult.token,
     },
   });
 }

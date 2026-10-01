@@ -7,165 +7,109 @@ const {
   updateNoteSchema,
 } = require("../validators/note.validator");
 
-async function getNotes(req, res) {
-  const limit = Number(req.query.limit) || 10;
-  const offset = Number(req.query.offset) || 0;
+const getNotes = async (req, res, next) => {
+  try {
+    const limit = Number(req.query.limit) || 10;
+    const offset = Number(req.query.offset) || 0;
 
-  if (limit < 1 || offset < 0) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Invalid pagination parameters",
-      },
-    });
-  }
-
-  const userId = req.user.userId;
-
-  const result = await noteService.getAllNotes(
-    userId,
-    limit,
-    offset
-  );
-
-  res.json({
-    success: true,
-    data: result.notes,
-    pagination: {
-      limit,
-      offset,
-      total: result.total,
-    },
-  });
-}
-
-async function getNote(req, res) {
-   try { 
-    const note = await noteService.getNoteById( 
-      req.user.userId, 
-      req.params.id 
+    const notes = await noteService.getAllNotes(
+      req.user.userId,
+      { limit, offset }
     );
-     if (!note) { 
+
+    res.json({
+      success: true,
+      data: notes,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getNote = async (req, res, next) => {
+  try {
+    const note = await noteService.getNoteById(
+      req.user.userId,
+      req.params.id
+    );
+
+    if (!note) {
       return res.status(404).json({
-         success: false, error: { 
-          message: "Note not found", 
-        },
-       }); 
-      } 
+        success: false,
+        error: "Note not found",
+      });
+    }
 
-      res.status(200).json({ 
-        success: true,
-         data: note, 
-        });
-       } 
-       catch (error) { 
-        console.error("Get note error:", error);
-         res.status(500).json({
-           success: false, error: { 
-            message: "Failed to fetch note", 
-          },
-         });
-         } 
-        }
-async function createNote(req, res) {
-  const result = createNoteSchema.safeParse(req.body);
-
-  if (!result.success) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Validation failed",
-        details: result.error.issues,
-      },
+    res.json({
+      success: true,
+      data: note,
     });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const note = await noteService.createNote(
-    req.user.userId,
-    result.data
-  );
+const createNote = async (req, res, next) => {
+  try {
+    console.log("AUTH USER:", req.user);
 
-  console.log("CREATED NOTE:", note);
+    const note = await noteService.createNote(
+      req.user.userId,
+      req.body
+    );
 
-  res.status(201).json({
-    success: true,
-    data: note,
-  });
-}
-
-function updateNote(req, res) {
-  const id = Number(req.params.id);
-
-  if (Number.isNaN(id)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Invalid note ID",
-      },
+    res.status(201).json({
+      success: true,
+      data: note,
     });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const result = updateNoteSchema.safeParse(req.body);
+const updateNote = async (req, res, next) => {
+  try {
+    const note = await noteService.updateNote(
+      req.user.userId,
+      req.params.id,
+      req.body
+    );
 
-  if (!result.success) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Validation failed",
-        details: result.error.issues,
-      },
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        error: "Note not found",
+      });
+    }
+
+    res.json({
+      success: true,
+      data: note,
     });
+  } catch (error) {
+    next(error);
   }
+};
 
-  const note = noteService.updateNote(
-    req.user.userId,
-    id,
-    result.data
-  );
+const deleteNote = async (req, res, next) => {
+  try {
+    const note = await noteService.deleteNote(
+      req.user.userId,
+      req.params.id
+    );
 
-  if (!note) {
-    return res.status(404).json({
-      success: false,
-      error: {
-        message: "Note not found",
-      },
-    });
+    if (!note) {
+      return res.status(404).json({
+        success: false,
+        error: "Note not found",
+      });
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
   }
-
-  res.json({
-    success: true,
-    data: note,
-  });
-}
-
-function deleteNote(req, res) {
-  const id = Number(req.params.id);
-
-  if (Number.isNaN(id)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Invalid note ID",
-      },
-    });
-  }
-
-  const deleted = noteService.deleteNote(
-    req.user.userId,
-    id
-  );
-
-  if (!deleted) {
-    return res.status(404).json({
-      success: false,
-      error: {
-        message: "Note not found",
-      },
-    });
-  }
-
-  res.status(204).send();
-}
+};
 
 async function getNoteStats(req, res) {
   try {

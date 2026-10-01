@@ -8,4 +8,8 @@ connectDB().then(() => {
 app.listen(PORT, () => {
   console.log(`Notes API running on http://localhost:${PORT}`);
 });
-});
+})
+.catch((error) => {
+    console.error("Database connection failed:", error);
+    process.exit(1);
+  });

@@ -1,52 +1,67 @@
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcrypt");
+const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 
-let users = [];
-let nextUserId = 1;
-
-async function createUser(email, password) {
+const createUser = async (email, password) => {
   const existingUser = await User.findOne({ email });
 
   if (existingUser) {
-    return null;
+    const error = new Error("Email already registered");
+    error.statusCode = 409;
+    throw error;
   }
 
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(password, 10);
 
   const user = await User.create({
     email,
-    password: hashedPassword,
+    passwordHash,
   });
 
   return {
     id: user._id,
     email: user.email,
   };
-}
+};
 
-async function validateUser(email, password) {
+const validateUser = async (email, password) => {
   const user = await User.findOne({ email });
 
   if (!user) {
-    return null;
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
   }
 
-  const passwordValid = await bcrypt.compare(
+  const passwordMatch = await bcrypt.compare(
     password,
-    user.password
+    user.passwordHash
   );
 
-  if (!passwordValid) {
-    return null;
+  if (!passwordMatch) {
+    const error = new Error("Invalid email or password");
+    error.statusCode = 401;
+    throw error;
   }
 
+  const token = jwt.sign(
+    {
+      userId: user._id.toString(),
+      email: user.email,
+    },
+    process.env.JWT_SECRET,
+    {
+      expiresIn: "1h",
+    }
+  );
+
   return {
-    id: user._id,
-    email: user.email,
+    token,
   };
-}
+};
 
 module.exports = {
   createUser,
   validateUser,
+  
 };

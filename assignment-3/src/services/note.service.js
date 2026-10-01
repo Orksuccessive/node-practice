@@ -1,37 +1,43 @@
 let notes = [];
 let nextId = 1;
-
+const mongoose = require("mongoose");
 const Note = require("../models/note.model");
 
 
-async function getAllNotes(userId, limit = 10, offset = 0) {
-  return Note.find({ userId })
+const getAllNotes = async (userId, { limit = 10, offset = 0 }) => {
+  return Note.find({ owner: userId })
     .sort({ createdAt: -1 })
     .skip(offset)
     .limit(limit);
-}
+};
 
-async function getNoteById(userId, id) {
+const getNoteById = async (userId, noteId) => {
+  if (!mongoose.Types.ObjectId.isValid(noteId)) {
+    return null;
+  }
+
   return Note.findOne({
-    _id: id,
-    userId,
+    _id: noteId,
+    owner: userId,
   });
-}
+};
 
-async function createNote(userId, data) {
+const createNote = async (userId, data) => {
   return Note.create({
-    userId,
-    title: data.title,
-    content: data.content,
-    tags: data.tags || [],
+    ...data,
+    owner: userId,
   });
-}
+};
 
-async function updateNote(userId, id, data) {
+const updateNote = async (userId, noteId, data) => {
+  if (!mongoose.Types.ObjectId.isValid(noteId)) {
+    return null;
+  }
+
   return Note.findOneAndUpdate(
     {
-      _id: id,
-      userId,
+      _id: noteId,
+      owner: userId,
     },
     {
       $set: data,
@@ -41,14 +47,18 @@ async function updateNote(userId, id, data) {
       runValidators: true,
     }
   );
-}
+};
 
-async function deleteNote(userId, id) {
+const deleteNote = async (userId, noteId) => {
+  if (!mongoose.Types.ObjectId.isValid(noteId)) {
+    return null;
+  }
+
   return Note.findOneAndDelete({
-    _id: id,
-    userId,
+    _id: noteId,
+    owner: userId,
   });
-}
+};
 
  function addAttachment(userId, id, attachment) {
   const note = notes.find(
@@ -83,7 +93,7 @@ async function getNoteStats() {
         notesPerUser: [
           {
             $group: {
-              _id: "$userId",
+              _id: "$owner",
               totalNotes: { $sum: 1 },
             },
           },
