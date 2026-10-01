@@ -9,6 +9,8 @@ const createNoteSchema = z.object({
   content: z
     .string()
     .min(1, "Content is required"),
+
+    tags: z.array(z.string()).optional().default([]),
 });
 
 const updateNoteSchema = createNoteSchema.partial();

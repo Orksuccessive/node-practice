@@ -7,7 +7,7 @@ const {
   updateNoteSchema,
 } = require("../validators/note.validator");
 
-function getNotes(req, res) {
+async function getNotes(req, res) {
   const limit = Number(req.query.limit) || 10;
   const offset = Number(req.query.offset) || 0;
 
@@ -22,7 +22,7 @@ function getNotes(req, res) {
 
   const userId = req.user.userId;
 
-  const result = noteService.getAllNotes(
+  const result = await noteService.getAllNotes(
     userId,
     limit,
     offset
@@ -39,39 +39,35 @@ function getNotes(req, res) {
   });
 }
 
-function getNote(req, res) {
-  const id = Number(req.params.id);
+async function getNote(req, res) {
+   try { 
+    const note = await noteService.getNoteById( 
+      req.user.userId, 
+      req.params.id 
+    );
+     if (!note) { 
+      return res.status(404).json({
+         success: false, error: { 
+          message: "Note not found", 
+        },
+       }); 
+      } 
 
-  if (Number.isNaN(id)) {
-    return res.status(400).json({
-      success: false,
-      error: {
-        message: "Invalid note ID",
-      },
-    });
-  }
-
-  const note = noteService.getNoteById(
-    req.user.userId,
-    id
-  );
-
-  if (!note) {
-    return res.status(404).json({
-      success: false,
-      error: {
-        message: "Note not found",
-      },
-    });
-  }
-
-  res.json({
-    success: true,
-    data: note,
-  });
-}
-
-function createNote(req, res) {
+      res.status(200).json({ 
+        success: true,
+         data: note, 
+        });
+       } 
+       catch (error) { 
+        console.error("Get note error:", error);
+         res.status(500).json({
+           success: false, error: { 
+            message: "Failed to fetch note", 
+          },
+         });
+         } 
+        }
+async function createNote(req, res) {
   const result = createNoteSchema.safeParse(req.body);
 
   if (!result.success) {
@@ -84,10 +80,12 @@ function createNote(req, res) {
     });
   }
 
-  const note = noteService.createNote(
+  const note = await noteService.createNote(
     req.user.userId,
     result.data
   );
+
+  console.log("CREATED NOTE:", note);
 
   res.status(201).json({
     success: true,
@@ -167,6 +165,26 @@ function deleteNote(req, res) {
   }
 
   res.status(204).send();
+}
+
+async function getNoteStats(req, res) {
+  try {
+    const stats = await noteService.getNoteStats();
+
+    res.status(200).json({
+      success: true,
+      data: stats[0],
+    });
+  } catch (error) {
+    console.error("Get note stats error:", error);
+
+    res.status(500).json({
+      success: false,
+      error: {
+        message: "Failed to fetch note statistics",
+      },
+    });
+  }
 }
 
 async function uploadAttachment(req, res) {
@@ -271,4 +289,5 @@ module.exports = {
   deleteNote,
   uploadAttachment,
   getAttachment,
+  getNoteStats,
 };

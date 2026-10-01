@@ -10,6 +10,8 @@ router.use(requireAuth);
 
 router.get("/", noteController.getNotes);
 
+router.get("/stats", noteController.getNoteStats);
+
 router.get("/:id", noteController.getNote);
 
 router.post("/", noteController.createNote);

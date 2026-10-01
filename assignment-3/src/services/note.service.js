@@ -1,70 +1,53 @@
 let notes = [];
 let nextId = 1;
 
-function getAllNotes(userId, limit, offset) {
-  const userNotes = notes.filter(
-    (note) => note.userId === userId
-  );
+const Note = require("../models/note.model");
 
-  return {
-    notes: userNotes.slice(offset, offset + limit),
-    total: userNotes.length,
-  };
+
+async function getAllNotes(userId, limit = 10, offset = 0) {
+  return Note.find({ userId })
+    .sort({ createdAt: -1 })
+    .skip(offset)
+    .limit(limit);
 }
 
-function getNoteById(userId, id) {
-  return notes.find(
-    (note) => note.id === id && note.userId === userId
-  );
+async function getNoteById(userId, id) {
+  return Note.findOne({
+    _id: id,
+    userId,
+  });
 }
 
-function createNote(userId, data) {
-  const note = {
-    id: nextId++,
+async function createNote(userId, data) {
+  return Note.create({
     userId,
     title: data.title,
     content: data.content,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  notes.push(note);
-
-  return note;
+    tags: data.tags || [],
+  });
 }
 
-function updateNote(userId, id, data) {
-  const note = getNoteById(userId, id);
-
-  if (!note) {
-    return null;
-  }
-
-  if (data.title !== undefined) {
-    note.title = data.title;
-  }
-
-  if (data.content !== undefined) {
-    note.content = data.content;
-  }
-
-  note.updatedAt = new Date().toISOString();
-
-  return note;
-}
-
-function deleteNote(userId, id) {
-  const index = notes.findIndex(
-    (note) => note.id === id && note.userId === userId
+async function updateNote(userId, id, data) {
+  return Note.findOneAndUpdate(
+    {
+      _id: id,
+      userId,
+    },
+    {
+      $set: data,
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
   );
+}
 
-  if (index === -1) {
-    return false;
-  }
-
-  notes.splice(index, 1);
-
-  return true;
+async function deleteNote(userId, id) {
+  return Note.findOneAndDelete({
+    _id: id,
+    userId,
+  });
 }
 
  function addAttachment(userId, id, attachment) {
@@ -93,6 +76,76 @@ function getAttachment(userId, id) {
   return note.attachment;
 }
 
+async function getNoteStats() {
+  return Note.aggregate([
+    {
+      $facet: {
+        notesPerUser: [
+          {
+            $group: {
+              _id: "$userId",
+              totalNotes: { $sum: 1 },
+            },
+          },
+          {
+            $sort: {
+              totalNotes: -1,
+            },
+          },
+        ],
+
+        topTags: [
+          {
+            $unwind: "$tags",
+          },
+          {
+            $group: {
+              _id: "$tags",
+              count: { $sum: 1 },
+            },
+          },
+          {
+            $sort: {
+              count: -1,
+            },
+          },
+          {
+            $limit: 10,
+          },
+        ],
+
+        notesPerDay: [
+          {
+            $match: {
+              createdAt: {
+                $gte: new Date(
+                  Date.now() - 7 * 24 * 60 * 60 * 1000
+                ),
+              },
+            },
+          },
+          {
+            $group: {
+              _id: {
+                $dateToString: {
+                  format: "%Y-%m-%d",
+                  date: "$createdAt",
+                },
+              },
+              totalNotes: { $sum: 1 },
+            },
+          },
+          {
+            $sort: {
+              _id: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+}
+
 module.exports = {
   getAllNotes,
   getNoteById,
@@ -101,4 +154,5 @@ module.exports = {
   deleteNote,
   addAttachment,
   getAttachment,
+  getNoteStats,
 };
