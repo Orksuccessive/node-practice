@@ -2,6 +2,7 @@ const express = require("express");
 
 const noteRoutes = require("./routes/note.routes");
 const authRoutes = require("./routes/auth.routes");
+const postRoutes = require("./routes/post.routes");
 const multer = require("multer");
 
 
@@ -11,6 +12,8 @@ app.use(express.json());
 
 app.use("/auth", authRoutes);
 app.use("/notes", noteRoutes);
+app.use("/posts", postRoutes);
+
 
 app.use((req, res) => {
   res.status(404).json({
